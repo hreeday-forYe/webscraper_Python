@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 from urllib.request import urlopen as uReq
 import logging
+import pymongo
 logging.basicConfig(filename="scrapper.log" , level=logging.INFO)
 
 app = Flask(__name__)
@@ -33,8 +34,9 @@ def index():
             commentboxes = prod_html.find_all('div', {'class': "_16PBlm"})
 
             filename = searchString + ".csv"
-            fw = open(filename, "w")
+            
             headers = "Product, Customer Name, Rating, Heading, Comment \n"
+            fw = open(filename, "w")
             fw.write(headers)
             reviews = []
             for commentbox in commentboxes:
@@ -52,7 +54,7 @@ def index():
 
                 except:
                     rating = 'No Rating'
-                    logging.info("rating")
+                    logging.info(rating)
 
                 try:
                     #commentHead.encode(encoding='utf-8')
@@ -70,8 +72,18 @@ def index():
 
                 mydict = {"Product": searchString, "Name": name, "Rating": rating, "CommentHead": commentHead,
                           "Comment": custComment}
-                reviews.append(mydict)
+
+            reviews.append(mydict)
             logging.info("log my final result {}".format(reviews))
+            # Making the connection with URL MONGODB
+            
+            client = pymongo.MongoClient("mongodb+srv://careerwisedevs:helloworld.js@cluster0.azpiolr.mongodb.net/?retryWrites=true&w=majority")
+            db = client['review_scrap']
+            review_col = db["review_scrap_data"]
+
+            # Inserting the data
+            review_col.insert_many(reviews)
+
             return render_template('result.html', reviews=reviews[0:(len(reviews)-1)])
         except Exception as e:
             logging.info(e)
